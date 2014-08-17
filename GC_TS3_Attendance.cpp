@@ -48,6 +48,8 @@ int main(void)
 		cout << endl;
 	}
 
+	cout << "Program will close once it's finished." << endl;
+	cout << "Please leave this window open." << endl;
 	cout << "Running . . . ";
 
 	ofstream cli;
@@ -62,8 +64,8 @@ int main(void)
 		{
 			cout << "Client failure: skipping" << endl;
 		}
-		//Sleep(899980);		//wait 15mins
-		Sleep(4980);			//wait 5secs for debug
+		Sleep(899980);		//wait 15mins
+		//Sleep(4980);			//wait 5secs for debug
 	}
 	if(!Clients())	//call last iteration separatly so there is no wait for processing
 	{
@@ -388,22 +390,48 @@ void CleanUp()
 			len = strlen(nextname.c_str());
 			same = false;
 			//check for #/#
-			if(nextname.substr(len - 2, 1) == "/")
+			if(len > 1 && nextname.substr(len - 2, 1) == "/")
 			{
 				nextname = nextname.substr(0, len-4);
 				Sleep(1);
 				//check for extra \s
 				len = strlen(nextname.c_str());
-				if(nextname.substr(len - 2, 2) == "\\s")
+				if(len > 1 && nextname.substr(len - 2, 2) == "\\s")
+				{
+					nextname = nextname.substr(0, len-2);
+					Sleep(1);
+				}
+			}
+			//check for #/## or ##/##
+			else if(len > 2 && nextname.substr(len - 3, 1) == "/")
+			{
+				nextname = nextname.substr(0, len-5);
+				Sleep(1);
+				//check for extra 1
+				len = strlen(nextname.c_str());
+				if(nextname.substr(len - 1, 1) == "1")
+				{
+					nextname = nextname.substr(0, len-1);
+					Sleep(1);
+					len = strlen(nextname.c_str());
+				}
+				//check for extra \s
+				if(len > 1 && nextname.substr(len - 2, 2) == "\\s")
 				{
 					nextname = nextname.substr(0, len-2);
 					Sleep(1);
 				}
 			}
 			//check for \s#
-			else if(nextname.substr(len - 3, 1) == "\\")
+			else if(len > 2 && nextname.substr(len - 3, 1) == "\\")
 			{
 				nextname = nextname.substr(0, len-3);
+				Sleep(1);
+			}
+			//check for \s##
+			else if(len > 3 && nextname.substr(len - 4, 1) == "\\")
+			{
+				nextname = nextname.substr(0, len-4);
 				Sleep(1);
 			}
 			//check for (#)
@@ -411,9 +439,16 @@ void CleanUp()
 			{
 				nextname = nextname.substr(0, len-3);
 				Sleep(1);
-				//check for extra \s
+				//check for extra ( if (##)
 				len = strlen(nextname.c_str());
-				if(nextname.substr(len - 2, 2) == "\\s")
+				if(nextname.substr(len - 1, 1) == "(")
+				{
+					nextname = nextname.substr(0, len-1);
+					Sleep(1);
+					len = strlen(nextname.c_str());
+				}
+				//check for extra \s
+				if(len > 1 && nextname.substr(len - 2, 2) == "\\s")
 				{
 					nextname = nextname.substr(0, len-2);
 					Sleep(1);
