@@ -82,6 +82,7 @@
   <ItemGroup>
     <ClInclude Include="GC_TS3_Attendance.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="socketRSall.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

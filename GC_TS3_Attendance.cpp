@@ -4,6 +4,7 @@
 #include <ctime>
 
 #include "GC_TS3_Attendance.h"
+#include "socketRSall.h"
 
 using namespace std;
 
@@ -57,15 +58,16 @@ int main(void)
 	cli << "";
 	cli.close();
 
-	int runs = time/0.25;
+	int runs = time*4;
+
 	for(int i = 0; i < runs; i++)
 	{
 		if(!Clients())
 		{
 			cout << "Client failure: skipping" << endl;
 		}
-		Sleep(899980);		//wait 15mins
-		//Sleep(4980);			//wait 5secs for debug
+		Sleep(900000);		//wait 15mins
+		//Sleep(5000);			//wait 5secs for debug
 	}
 	if(!Clients())	//call last iteration separatly so there is no wait for processing
 	{
@@ -85,34 +87,34 @@ bool SetUp()
 {
 	cout << "\nExample Army Tree:\n" << endl;
 	cout << "Army Name" << endl;
-	cout << "   Main Channel" << endl;
-	cout << "   Officer Channel" << endl;
-	cout << "   FC Channel" << endl;
-	cout << "   Infantry Channel" << endl;
-	cout << "      Inf Squad 1" << endl;
-	cout << "      ..." << endl;
-	cout << "      Inf Squad n" << endl;
-	cout << "   Armour Channel" << endl;
-	cout << "      Arm Squad 1" << endl;
-	cout << "      ..." << endl;
-	cout << "      Arm Squad n" << endl;
-	cout << "   Air Channel" << endl;
-	cout << "      Air Squad 1" << endl;
-	cout << "      ..." << endl;
-	cout << "      Air Squad n\n" << endl;
+	cout << "    Main Channel" << endl;
+	cout << "    Officer Channel" << endl;
+	cout << "    FC Channel" << endl;
+	cout << "    Division 1 Channel" << endl;
+	cout << "        Div 1 Squad 1" << endl;
+	cout << "        ..." << endl;
+	cout << "        Div 1 Squad n" << endl;
+	cout << "    Division 2 Channel" << endl;
+	cout << "        Div 2 Squad 1" << endl;
+	cout << "        ..." << endl;
+	cout << "        Div 2 Squad n" << endl;
+	cout << "    Division 3 Channel" << endl;
+	cout << "        Div 3 Squad 1" << endl;
+	cout << "        ..." << endl;
+	cout << "        Div 3 Squad n\n" << endl;
 
 	if(!ConnectToHost(25639, "127.0.0.1", TS3))
 	{
 		return false;
 	}
 
-	int iResult;
-	char reci[256];
-	memset(reci, 0, 256);
+	bool iResult;
+	char reci[181];
+	memset(reci, 0, 181);
+	SocketRSall io;
 
-	Sleep(10);
-	iResult = recv(TS3, reci, 256 ,0);	//get TS3 Client...
-	if (iResult == SOCKET_ERROR)
+	iResult = io.recv_all(TS3, reci, 181 ,0);	//get TS3 Client...
+	if (!iResult)
 	{
 		cout << "First Recieve Failure" << endl;
 		CloseConnection(TS3);
@@ -122,7 +124,7 @@ bool SetUp()
 	string cont;
 	vector<string> cids;
 
-	cout << "Please move to your equivalent of 'Air Squad n'" << endl;
+	cout << "Please move to your equivalent of 'Div 3 Squad n'" << endl;
 	cout << "When there, type ok: ";
 	cin >> cont;
 	cout << endl;
@@ -132,7 +134,7 @@ bool SetUp()
 		return false;
 	}
 
-	cout << "Please move to your equivalent of 'Armour Squad n'" << endl;
+	cout << "Please move to your equivalent of 'Div 2 Squad n'" << endl;
 	cout << "When there, type ok: ";
 	cin >> cont;
 	cout << endl;
@@ -142,7 +144,7 @@ bool SetUp()
 		return false;
 	}
 
-	cout << "Please move to your equivalent of 'Inf Squad n'" << endl;
+	cout << "Please move to your equivalent of 'Div 1 Squad n'" << endl;
 	cout << "When there, type ok: ";
 	cin >> cont;
 	cout << endl;
@@ -152,7 +154,7 @@ bool SetUp()
 		return false;
 	}
 
-	cout << "Please move to your equivalent of 'Air Channel'" << endl;
+	cout << "Please move to your equivalent of 'Division 3 Channel'" << endl;
 	cout << "When there, type ok: ";
 	cin >> cont;
 	cout << endl;
@@ -175,7 +177,7 @@ bool SetUp()
 
 	ofstream file;
 	file.open("Channels.txt");
-	for(int i = 0; i < cids.size(); i++)
+	for(int i = 0; i < static_cast<int>(cids.size()); i++)
 	{
 		file << cids[i] << endl;
 	}
@@ -188,10 +190,11 @@ bool SetUp()
 
 bool Channels(vector<string>& cids, bool single)
 {
-	int iResult;
+	bool iResult;
 	char* whoami = "whoami\n";
 	char reci1[64];
 	char reci2[256];
+	SocketRSall io;
 	
 	string identstart = "cid=";
 	string identend = "\n";
@@ -199,16 +202,15 @@ bool Channels(vector<string>& cids, bool single)
 
 	string input, output, cid;
 
-	iResult = send(TS3, whoami, (int)strlen(whoami), 0);	//send whoami
-	if (iResult == SOCKET_ERROR)
+	iResult = io.send_all(TS3, whoami, (int)strlen(whoami), 0);	//io.send_all whoami
+	if (!iResult)
 	{
 		cout << "whoami Send Failure" << endl;
 		CloseConnection(TS3);
 		return false;
 	}
-	Sleep(1);								//let message be fully sent
-	iResult = recv(TS3, reci1, 64 ,0);		//get whoami
-	if (iResult == SOCKET_ERROR)
+	iResult = io.recv_all(TS3, reci1, 64 ,0, "msg=");		//get whoami
+	if (!iResult)
 	{
 		cout << "whoami Recieve Failure" << endl;
 		CloseConnection(TS3);
@@ -241,16 +243,15 @@ bool Channels(vector<string>& cids, bool single)
 		output.append(" channel_order\n");
 		const char *order = output.c_str();
 
-		iResult = send(TS3, order, (int)strlen(order) ,0);
-		if (iResult == SOCKET_ERROR)
+		iResult = io.send_all(TS3, order, (int)strlen(order) ,0);
+		if (!iResult)
 		{
 			cout << "order Send Failure" << endl;
 			CloseConnection(TS3);
 			return false;
 		}
-		Sleep(10);
-		iResult = recv(TS3, reci2, 256 ,0);		//recieve channel_order
-		if (iResult == SOCKET_ERROR)
+		iResult = io.recv_all(TS3, reci2, 256 ,0, "msg=");		//recieve channel_order
+		if (!iResult)
 		{
 			cout << "order Recieve Failure" << endl;
 			CloseConnection(TS3);
@@ -286,6 +287,7 @@ bool Clients()
 		cout << "Channels.txt is missing. Please run the setup." << endl;
 		return false;
 	}
+
 	while(!nextcid.empty())
 	{
 		getline(chan, nextcid);
@@ -303,14 +305,14 @@ bool Clients()
 	}
 
 	int iResult;
-	char reci[256];
+	char reci[181];
 	char reci2[8192];
-	memset(reci, 0, 256);
+	memset(reci, 0, 181);
 	memset(reci2, 0, 8192);
+	SocketRSall io;
 
-	Sleep(10);
-	iResult = recv(TS3, reci, 256 ,0);	//get TS3 Client...
-	if (iResult == SOCKET_ERROR)
+	iResult = io.recv_all(TS3, reci, 181 ,0);	//get TS3 Client...
+	if (!iResult)
 	{
 		cout << "First Recieve Failure" << endl;
 		CloseConnection(TS3);
@@ -325,44 +327,50 @@ bool Clients()
 	ofstream file;
 	file.open("Clients.txt", ios::out | ios::app);
 
-	for(int i = 0; i < cids.size(); i++)
+	for(int i = 0; i < static_cast<int>(cids.size()); i++)
 	{
 		output = "channelclientlist ";
 		output.append(cids[i]);
 		output.append("\n");
 		const char *nicks = output.c_str();
-		
-		iResult = send(TS3, nicks, (int)strlen(nicks) ,0);
-		if (iResult == SOCKET_ERROR)
+
+		iResult = io.send_all(TS3, nicks, (int)strlen(nicks) ,0);
+		if (!iResult)
 		{
 			cout << "nicks Send Failure" << endl;
 			CloseConnection(TS3);
 			return false;
 		}
-		Sleep(10);
-		iResult = recv(TS3, reci2, 8192 ,0);		//recieve channelcli...
-		if (iResult == SOCKET_ERROR)
+		iResult = io.recv_all(TS3, reci2, 8192 ,0, "msg=");		//recieve channelcli...
+		if (!iResult)
 		{
 			cout << "order Recieve Failure" << endl;
 			CloseConnection(TS3);
 			return false;
 		}
-
 		input = reci2;
 
-		if(input.substr(2, 2) != "er")
+		int count = 0;
+		while(TRUE)
 		{
-			while(input.substr(2, 2) != "er")
+			startpos = input.find(identstart);
+			if(startpos == -1 || startpos > 8192)
 			{
-				startpos = input.find(identstart);
-				endpos = input.find(identend);
-				name = input.substr(startpos + 16, endpos - startpos - 16);
-				input = input.substr(endpos + 14);
-				file << name << endl;
+				break;
 			}
-			memset(reci2, 0, 8192);
+			endpos = input.find(identend);
+			if(endpos < 0 || endpos > 8192)
+			{
+				break;
+			}
+			name = input.substr(startpos + 16, endpos - startpos - 16);
+			input = input.substr(endpos + 14);
+			file << name << endl;
+			count++;
 		}
+		memset(reci2, 0, 8192);
 	}
+	CloseConnection(TS3);
 	file.close();
 
 	return true;
@@ -455,7 +463,7 @@ void CleanUp()
 				}
 			}
 			//check for the same name
-			for(int j = 0; j < names.size(); j++)
+			for(int j = 0; j < static_cast<int>(names.size()); j++)
 			{
 				if(nextname == names[j])
 				{
@@ -475,7 +483,7 @@ void CleanUp()
 	//remove "\s" and replace with " "
 	const string bad = "\\s";
 	const string good = " ";
-	for(int i = 0; i < names.size(); i++)
+	for(int i = 0; i < static_cast<int>(names.size()); i++)
 	{
 		ReplaceAll(names[i], bad, good);
 	}
@@ -493,7 +501,7 @@ void CleanUp()
 
 	ofstream atten;
 	atten.open(filename.str());
-	for(int i = 0; i < names.size(); i++)
+	for(int i = 0; i < static_cast<int>(names.size()); i++)
 	{
 		atten << names[i] << endl;
 	}
